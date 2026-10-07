@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Replaced the AWS CDK / CloudFormation infrastructure with Terraform (`terraform/`)
+- Removed the helper Lambda; its custom resources are replaced by native Terraform resources
+- Transformer Lambda runtime defaults to `nodejs22.x`
+
+### Fixed
+
+- Lambda error alarm notifications: the alarm SNS topic now uses a customer-managed KMS key that CloudWatch can use (the AWS-managed `aws/sns` key blocked alarm delivery)
+
 ## [4.0.6] - 2023-10-24
 
 ### Changed

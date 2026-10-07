@@ -26,19 +26,19 @@ This solution gives you a turnkey environment to begin logging and analyzing you
 - collect logs from multiple regions
 - a single pane view for log analysis and visualization
 
-then you can get all this with this 1-click deployment solution.
+then you can get all this with a single `terraform apply`.
 
 This solution uses Amazon OpenSearch Service (successor to Amazon Elasticsearch Service) and Kibana, an analytics and visualization platform that is integrated with Amazon OpenSearch Service, that results in a unified view of all the log events.
 
 ## Architecture
 
-The Centralized Logging on AWS solution contains the following components: **log ingestion**, **log indexing**, and **visualization**. You must deploy the AWS CloudFormation template in the AWS account where you intend to store your log data.
+The Centralized Logging on AWS solution contains the following components: **log ingestion**, **log indexing**, and **visualization**. You must deploy the Terraform configuration in the AWS account where you intend to store your log data.
 
 <img src="./architecture.png" width="750" height="500">
 
 ## Customization
 
-- Prerequisite: Node.js>=16 | npm >= 8
+- Prerequisites: Node.js >= 18 | npm >= 8 | Terraform >= 1.5 (>= 1.7 to run `terraform test`)
 
 ### Setup
 
@@ -52,16 +52,11 @@ npm run lint
 
 ### Changes
 
-You may make any needed change as per your requirement. If you want to customize the Centralized Logging on AWS opinionated defaults, you can modify the [solution manifest file](./source/resources/lib/manifest.json). You can also control sending solution usage metrics to aws-solutions, from the manifest file.
-
-```
-"solutionVersion": "%%VERSION%%", #provide a valid value eg. v1.0
-"sendMetric": "Yes",
-```
+The infrastructure is defined with Terraform in the [terraform](./terraform) directory. Opinionated defaults (cluster sizing, names, runtimes, ...) are exposed as input variables in [variables.tf](./terraform/variables.tf). You can also control sending solution usage metrics to aws-solutions with the `send_anonymized_metrics` variable.
 
 ### Unit Test
 
-You can run unit tests with the following command from the root of the project
+You can run unit tests (transformer build, `terraform validate` and the mocked `terraform test` suite) with the following command from the root of the project
 
 ```
  npm run test
@@ -69,7 +64,7 @@ You can run unit tests with the following command from the root of the project
 
 ### Build
 
-You can build lambda binaries with the following command from the root of the project
+You can build the transformer lambda package with the following command from the root of the project. Terraform deploys the resulting `source/services/transformer/dist/transformer/cl-transformer.zip`.
 
 ```
  npm run build
@@ -77,64 +72,49 @@ You can build lambda binaries with the following command from the root of the pr
 
 ### Deploy
 
-Run the following command from the root of the project. Deploys all the primary solution components needed for Centralized Logging on AWS. **Deploy in Primary Account**
+Deploys all the primary solution components needed for Centralized Logging on AWS. **Deploy in Primary Account**
 
 ```
-cd source/resources
-npm ci
+npm run build
+cd terraform
+cp terraform.tfvars.example terraform.tfvars   # set admin_email, spoke_accounts, spoke_regions, ...
+terraform init
+terraform apply
 ```
 
-```
-npm run cdk-bootstrap -- --profile <PROFILE_NAME>
-npm run cdk-synth
-npm run cdk-deploy -- CL-PrimaryStack --parameters AdminEmail=<EMAIL> --parameters SpokeAccounts=<ACCOUNT-ID-1,ACCOUNT-ID-2...> --parameters JumpboxKey=<EC2_KEY_PAIR> --parameters JumpboxDeploy='Yes' --profile <PROFILE_NAME>
-```
-
-_Note:_ for PROFILE_NAME, substitute the name of an AWS CLI profile that contains appropriate credentials for deploying in your preferred region.
+See the [Terraform README](./terraform/README.md) for all inputs, outputs, and notes on migrating from the CloudFormation/CDK version.
 
 ## Sample Scenario (Enabling CloudWatch logging on Elasticsearch domain)
 
-The default deployment uses opinionated values as setup in [solution manifest file](./source/resources/lib/manifest.json). In this scenario let's say we want to enable CloudWatch logging for ES domain.
-
-You would need to update the **ESDomain** resource in cl-primary-stack.ts as below:
+In this scenario let's say we want to enable CloudWatch logging for the ES domain. You would add `log_publishing_options` blocks to the `aws_opensearch_domain.es` resource in [opensearch.tf](./terraform/opensearch.tf), along with a CloudWatch Logs resource policy allowing `es.amazonaws.com` to write to the log group:
 
 ```
- logging: {
-        slowSearchLogEnabled: true,
-        appLogEnabled: true,
-        slowIndexLogEnabled: true,
-      },
+  log_publishing_options {
+    log_type                 = "ES_APPLICATION_LOGS"
+    cloudwatch_log_group_arn = aws_cloudwatch_log_group.es_application.arn
+  }
 ```
 
 ## File structure
 
 Centralized Logging on AWS solution consists of:
 
-- cdk constructs to generate needed resources
-- helper for bootstrapping purposes like creating CloudWatch Logs Destinations
+- Terraform configuration to provision the needed resources
 - transformer to translate kinesis data stream records into Elasticsearch documents
 
 <pre>
 |-config_files                    [ config files for prettier, eslint etc. ]
 |-architecture.png                [ solution architecture diagram ]
+|-terraform/
+  |-*.tf                          [ primary deployment: VPC, Cognito, domain, Kinesis, Firehose, destinations, jumpbox ]
+  |-modules/demo/                 [ optional sample log sources: web server, VPC flow logs, CloudTrail ]
+  |-tests/                        [ terraform test suite using mocked providers ]
+  |-terraform.tfvars.example      [ example input values ]
 |-source/
-  |dashboard.ndjson               [ sample dashboard for demo ]  
+  |dashboard.ndjson               [ sample dashboard for demo ]
   |run-unit-test.sh               [ script to run unit tests ]
-  |-resources
-    |-bin/
-      |-app.ts                    [ entry point for CDK app ]
-    |-__tests__/                  [ unit tests for CDK constructs ] 
-    |-lib/
-      |-cl-demo-ec2-construct.ts  [ CDK construct for demo web server resource ]
-      |-cl-demo-stack.ts          [ CDK construct for demo stack]
-      |-cl-jumpbox-construct.ts   [ CDK construct for windows jumpbox resource ]  
-      |-cl-primary-stack.ts       [ CDK construct for primary stack and related resources ]
-      |-utils.ts                  [ utilities for generic functionalities across CDK constructs ]   
-      |-manifest.json             [ manifest file for CDK resources ]
-    |-config_files                [ tsconfig, jest.config.js, package.json etc. ]
   |-services/
     |-@aws-solutions/utils/       [ library with generic utility functions for microservice ]
-    |-helper/                     [ lambda backed helper custom resource to help with solution launch/update/delete ]
     |-transformer/                [ microservice to translate kinesis records into es documents ]
 </pre>
 

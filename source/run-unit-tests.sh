@@ -12,7 +12,7 @@ set -e
 
 # Get reference for all important folders
 source_dir="$PWD"
-resource_dir="$source_dir/resources"
+terraform_dir="$source_dir/../terraform"
 services_dir="$source_dir/services"
 
 echo "------------------------------------------------------------------------------"
@@ -21,24 +21,17 @@ echo "--------------------------------------------------------------------------
 cd $services_dir/transformer
 npm run build:all
 
-cd $services_dir/helper
-npm run build:all
-
 echo "------------------------------------------------------------------------------"
-echo "[Test] Resources"
+echo "[Test] Terraform"
 echo "------------------------------------------------------------------------------"
-cd $resource_dir
-npm run test -- -u
-
-echo "------------------------------------------------------------------------------"
-echo "[Test] helper"
-echo "------------------------------------------------------------------------------"
-cd $services_dir/helper
-npm run test
+cd $terraform_dir
+terraform fmt -recursive -check
+terraform init -backend=false -input=false
+terraform validate
+terraform test
 
 echo "------------------------------------------------------------------------------"
 echo "[Test] transformer"
 echo "------------------------------------------------------------------------------"
 cd $services_dir/transformer
 npm run test
-
