@@ -40,7 +40,7 @@
     "includes": "./services/",
     "exclude": ["**/*+(.d.ts|.test.ts|node_modules)"],
     "mode": "modules",
-    "externalPattern": ["**/resources/**", "**/deployment/**"],
+    "externalPattern": ["**/deployment/**"],
     "excludeExternals": true,
     "ignoreCompilerErrors": true,
     "out": "docs",

@@ -1,0 +1,1 @@
+placeholder Lambda package for terraform tests

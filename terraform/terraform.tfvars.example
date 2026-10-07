@@ -1,0 +1,10 @@
+region         = "us-east-1"
+admin_email    = "admin@example.com"
+spoke_accounts = ["111111111111", "222222222222"]
+spoke_regions  = ["us-east-1", "us-west-2"] # or ["All"]
+
+# domain_name    = "centralizedlogging"
+# cluster_size   = "Small" # Small | Medium | Large
+# deploy_demo    = false   # requires this account in spoke_accounts and this region in spoke_regions
+# deploy_jumpbox = false
+# jumpbox_key    = "my-key-pair"

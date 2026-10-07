@@ -5,10 +5,11 @@
   "scripts": {
     "lint": "./node_modules/eslint/bin/eslint.js . --ext .ts",
     "prettier-format": "./node_modules/prettier/bin-prettier.js --config .prettierrc.yml '**/*.ts' --write",
-    "build:helper": "cd source/services/helper && npm run build:all",
     "build:transformer": "cd source/services/transformer && npm run build:all",
-    "build": "npm run build:helper && npm run build:transformer",
-    "test": "cd source && chmod +x run-unit-tests.sh && ./run-unit-tests.sh"
+    "build": "npm run build:transformer",
+    "test": "cd source && chmod +x run-unit-tests.sh && ./run-unit-tests.sh",
+    "tf:fmt": "terraform -chdir=terraform fmt -recursive -check",
+    "tf:test": "terraform -chdir=terraform init -backend=false -input=false >/dev/null && terraform -chdir=terraform test"
   },
   "author": "aws-solutions",
   "license": "Apache-2.0",
@@ -21,7 +22,6 @@
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.1",
     "prettier": "^3.0.3",
-    "typescript": "^5.1.3",
-    "aws-cdk": "^2.68.0"
+    "typescript": "^5.1.3"
   }
 }
