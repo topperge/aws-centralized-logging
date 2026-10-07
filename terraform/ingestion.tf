@@ -117,10 +117,55 @@ resource "aws_lambda_event_source_mapping" "transformer" {
 #------------------------------------------------------------------------------
 # Error alarm
 #------------------------------------------------------------------------------
+# Customer-managed key for the alarm topic. CloudWatch alarms cannot publish to
+# topics encrypted with the AWS-managed aws/sns key, because its key policy
+# cannot be changed to grant cloudwatch.amazonaws.com access.
+data "aws_iam_policy_document" "alarms_key" {
+  statement {
+    sid       = "EnableAccountPermissions"
+    actions   = ["kms:*"]
+    resources = ["*"]
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:${local.partition}:iam::${local.account_id}:root"]
+    }
+  }
+  statement {
+    sid       = "AllowCloudWatchAlarms"
+    actions   = ["kms:Decrypt", "kms:GenerateDataKey*"]
+    resources = ["*"]
+    principals {
+      type        = "Service"
+      identifiers = ["cloudwatch.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [local.account_id]
+    }
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = ["arn:${local.partition}:cloudwatch:${local.region}:${local.account_id}:alarm:*"]
+    }
+  }
+}
+
+resource "aws_kms_key" "alarms" {
+  description         = "${local.solution_name} - encryption for the ${var.name_prefix} Lambda error alarm topic"
+  enable_key_rotation = true
+  policy              = data.aws_iam_policy_document.alarms_key.json
+}
+
+resource "aws_kms_alias" "alarms" {
+  name          = "alias/${var.name_prefix}-alarms"
+  target_key_id = aws_kms_key.alarms.key_id
+}
+
 resource "aws_sns_topic" "alarms" {
   name              = "${var.name_prefix}-Lambda-Error"
   display_name      = "CL-Lambda-Error"
-  kms_master_key_id = "alias/aws/sns"
+  kms_master_key_id = aws_kms_key.alarms.arn
 }
 
 resource "aws_sns_topic_subscription" "admin_email" {

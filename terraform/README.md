@@ -75,6 +75,10 @@ Then, in each spoke account/region, subscribe log groups to the destination usin
   `deploy_demo` checks at plan time that the primary account/region are listed as spokes.
 - **Lambda runtime** defaults to `nodejs22.x`; `nodejs18.x` is deprecated and can no longer be used
   to create functions.
+- **Alarm topic encryption.** The CDK version encrypted the alarm SNS topic with the AWS-managed
+  `aws/sns` key, which CloudWatch alarms cannot publish to, so alarm emails were never delivered.
+  Terraform uses a customer-managed KMS key (`alias/<name_prefix>-alarms`, rotation enabled) whose
+  policy lets CloudWatch alarms in this account use it. The key costs about $1/month.
 - **Cognito.** `ENFORCED` advanced security requires the Cognito PLUS feature tier (billed per MAU),
   which did not exist when the CDK version was written.
 

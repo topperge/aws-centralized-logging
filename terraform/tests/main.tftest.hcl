@@ -77,6 +77,10 @@ run "defaults" {
     error_message = "ENFORCED advanced security requires the PLUS tier"
   }
   assert {
+    condition     = aws_kms_key.alarms.enable_key_rotation && aws_kms_alias.alarms.name == "alias/CL-alarms"
+    error_message = "Alarm topic should use a rotating customer-managed KMS key"
+  }
+  assert {
     condition     = length(aws_instance.jumpbox) == 0 && length(module.demo) == 0
     error_message = "Jumpbox and demo should not be deployed by default"
   }
